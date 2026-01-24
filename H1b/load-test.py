@@ -1,9 +1,10 @@
-import requests
+import requests # Http requests
 import time
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, timedelta
 
+# This function hits a URL again and again for duration_seconds (default 30).
 def load_test(url, duration_seconds=30):
     response_times = []
     start_time = time.time()
@@ -11,6 +12,7 @@ def load_test(url, duration_seconds=30):
     
     print(f"Starting load test for {duration_seconds} seconds...")
     
+    # As long as the current time is still < end time, keep sending requests.
     while time.time() < end_time:
         try:
             start_request = time.time()
@@ -31,7 +33,7 @@ def load_test(url, duration_seconds=30):
     return response_times
 
 # Replace with your EC2 public IP
-EC2_URL = "http://44.249.31.240:8080/albums"
+EC2_URL = "http://52.26.219.219:8080/albums"
 
 # Run the test
 response_times = load_test(EC2_URL)

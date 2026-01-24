@@ -1,0 +1,25 @@
+# Go
+*.exe
+*.out
+*.test
+*.log
+/bin/
+/dist/
+
+# Mac
+.DS_Store
+
+# Terraform (DO NOT COMMIT STATE)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Keys / secrets
+*.pem
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
