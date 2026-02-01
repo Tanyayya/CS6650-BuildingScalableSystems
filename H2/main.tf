@@ -18,13 +18,27 @@ provider "aws" {
 # Your ec2 instance
 resource "aws_instance" "demo-instance" {
   ami                    = data.aws_ami.al2023.id
-  instance_type          = "t2.micro"
+  instance_type          = "t3.micro"
   iam_instance_profile   = "LabInstanceProfile"
   vpc_security_group_ids = [aws_security_group.ssh.id]
   key_name               = var.ssh_key_name
 
   tags = {
     Name = "terraform-created-instance-:)"
+  }
+}
+
+#second Ec2 instance
+
+resource "aws_instance" "demo-instance-2" {
+  ami                    = data.aws_ami.al2023.id
+  instance_type          = "t3.micro"
+  iam_instance_profile   = "LabInstanceProfile"
+  vpc_security_group_ids = [aws_security_group.ssh.id]
+  key_name               = var.ssh_key_name
+
+  tags = {
+    Name = "terraform-created-instance-2"
   }
 }
 
@@ -40,6 +54,14 @@ resource "aws_security_group" "ssh" {
     protocol    = "tcp"
     cidr_blocks = [var.ssh_cidr]
   }
+  ingress {
+  description = "HTTP app"
+  from_port   = 8080
+  to_port     = 8080
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
   egress {
     from_port   = 0
     to_port     = 0
