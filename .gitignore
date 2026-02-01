@@ -28,3 +28,6 @@ web-service-gin-amd64.tar.gz
 *.tar.gz
 
 
+*.tar.gz
+web-service-gin.tar.gz
+web-service-gin-amd64.tar.gz
