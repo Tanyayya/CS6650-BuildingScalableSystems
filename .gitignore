@@ -23,3 +23,8 @@
 __pycache__/
 *.pyc
 
+web-service-gin.tar.gz
+web-service-gin-amd64.tar.gz
+*.tar.gz
+
+
