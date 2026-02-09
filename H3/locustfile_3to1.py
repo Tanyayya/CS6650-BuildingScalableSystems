@@ -1,7 +1,7 @@
 from locust import HttpUser, task, between
 import random
 
-class AlbumUser(HttpUser):
+class AlbumUser(FastHttpUser):
     # Add a tiny think time to avoid melting your CPU
     wait_time = between(0.01, 0.05)
 

@@ -10,7 +10,7 @@ func main() {
 	runtime.GOMAXPROCS(1)
 
 	const roundTrips = 1_000_000
-	ch := make(chan struct{})
+	ch := make(chan struct{}) //transferring the signal
 
 	start := time.Now()
 
