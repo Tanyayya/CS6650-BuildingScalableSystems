@@ -61,11 +61,9 @@ def split(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to download input_url: {e}")
 
-    # 2) split safely by lines
     lines = text.splitlines(keepends=True)
     chunks = _split_lines(lines, n)
 
-    # 3) upload chunks to S3
     job_id = _job_id()
     chunk_urls = []
 
