@@ -1,3 +1,4 @@
+cat > locustfile.py <<'EOF'
 import random
 from locust import HttpUser, task, between
 
@@ -6,7 +7,7 @@ BASE_PATH = "/v1"
 class StoreUser(HttpUser):
     wait_time = between(0.01, 0.05)
 
-    @task(90)
+    @task(50)
     def get_hit(self):
         pid = random.choice([1, 2])
         self.client.get(f"{BASE_PATH}/products/{pid}", name="GET hit (1-2)")
@@ -16,7 +17,7 @@ class StoreUser(HttpUser):
         pid = random.randint(3, 5000)
         self.client.get(f"{BASE_PATH}/products/{pid}", name="GET miss (404)")
 
-    @task(10)
+    @task(40)
     def post_details_hit(self):
         pid = random.choice([1, 2])
         self.client.post(
@@ -31,3 +32,5 @@ class StoreUser(HttpUser):
             },
             name="POST details hit (1-2)"
         )
+EOF
+

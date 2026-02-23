@@ -10,12 +10,13 @@ from fastapi import FastAPI, HTTPException, Query
 
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 OUTPUT_BUCKET = os.getenv("OUTPUT_BUCKET")  # required
-OUTPUT_PREFIX = os.getenv("OUTPUT_PREFIX", "jobs")  # optional
+OUTPUT_PREFIX = os.getenv("OUTPUT_PREFIX", "jobs")  
 
 if not OUTPUT_BUCKET:
     raise RuntimeError("Missing env var OUTPUT_BUCKET")
 
-s3 = boto3.client("s3", region_name=AWS_REGION)
+# Create S3 client
+s3 = boto3.client("s3", region_name=AWS_REGION)   
 app = FastAPI(title="Splitter", version="1.0")
 
 
@@ -64,6 +65,7 @@ def split(
     lines = text.splitlines(keepends=True)
     chunks = _split_lines(lines, n)
 
+    # unique identifier for one split request.
     job_id = _job_id()
     chunk_urls = []
 

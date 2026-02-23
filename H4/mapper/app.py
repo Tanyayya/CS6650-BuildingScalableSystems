@@ -56,7 +56,7 @@ def map_chunk(
 
     counts = count_words(text)
 
-    # ✅ added metrics (ONLY addition)
+    # added metrics (ONLY addition)
     total_words = sum(counts.values())
     total_unique_words = len(counts)
 
