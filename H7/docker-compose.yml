@@ -1,0 +1,115 @@
+services:
+
+  localstack:
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: sns,sqs
+      DEBUG: "0"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:4566/_localstack/health | grep -q 'running\\|available'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  setup-aws:
+    image: amazon/aws-cli:latest
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Creating SNS topic..."
+        TOPIC_ARN=$$(aws --endpoint-url=http://localstack:4566 sns create-topic \
+          --name order-processing-events \
+          --query TopicArn --output text)
+        echo "Topic ARN: $$TOPIC_ARN"
+
+        echo "Creating SQS queue..."
+        QUEUE_URL=$$(aws --endpoint-url=http://localstack:4566 sqs create-queue \
+          --queue-name order-processing-queue \
+          --attributes VisibilityTimeout=30,MessageRetentionPeriod=345600,ReceiveMessageWaitTimeSeconds=20 \
+          --query QueueUrl --output text)
+        echo "Queue URL: $$QUEUE_URL"
+
+        QUEUE_ARN=$$(aws --endpoint-url=http://localstack:4566 sqs get-queue-attributes \
+          --queue-url $$QUEUE_URL \
+          --attribute-names QueueArn \
+          --query Attributes.QueueArn --output text)
+
+        echo "Subscribing SQS to SNS..."
+        aws --endpoint-url=http://localstack:4566 sns subscribe \
+          --topic-arn $$TOPIC_ARN \
+          --protocol sqs \
+          --notification-endpoint $$QUEUE_ARN
+        echo "Setup complete!"
+
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      ENDPOINT_URL: http://localstack:4566
+      SNS_TOPIC_ARN: arn:aws:sns:us-east-1:000000000000:order-processing-events
+    depends_on:
+      setup-aws:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ── Phase 5: change NUM_WORKERS to run each scaling test ─────────────────
+  #
+  #  Test 1 — 5 workers:   NUM_WORKERS=5    rate=1.67/sec
+  #  Test 2 — 20 workers:  NUM_WORKERS=20   rate=6.67/sec
+  #  Test 3 — 100 workers: NUM_WORKERS=100  rate=33.3/sec
+  #  Breakeven:            NUM_WORKERS=182  rate=60.6/sec
+  #
+  #  After changing NUM_WORKERS run:
+  #    docker compose up -d --no-deps --build order-processor
+  order-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: "8081"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      ENDPOINT_URL: http://localstack:4566
+      SNS_TOPIC_ARN: arn:aws:sns:us-east-1:000000000000:order-processing-events
+      SQS_QUEUE_URL: http://localstack:4566/000000000000/order-processing-queue
+      NUM_WORKERS: 100   # ← change this: 5, 20, 100, 182
+    depends_on:
+      setup-aws:
+        condition: service_completed_successfully
+
+  locust:
+    image: locustio/locust:2.20.1
+    profiles: ["load"]
+    ports:
+      - "8089:8089"
+    volumes:
+      - .:/mnt/locust
+    command: >
+      -f /mnt/locust/locustfile.py
+      --host http://order-service:8080
+    depends_on:
+      order-service:
+        condition: service_healthy
