@@ -27,7 +27,7 @@ func main() {
 		region = "us-east-1"
 	}
 
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))  //telling your app "hey, we're connecting to AWS in us-east-1
 	if err != nil {
 		log.Fatalf("[main] failed to load AWS config: %v", err)
 	}
@@ -36,7 +36,7 @@ func main() {
 	topicARN    := os.Getenv("SNS_TOPIC_ARN")
 	queueURL    := os.Getenv("SQS_QUEUE_URL")
 
-	// SNS client — override endpoint for LocalStack
+	//  if ENDPOINT_URL is set, talk to LocalStack. If not, talk to real AWS
 	var snsClient *sns.Client
 	if endpointURL != "" {
 		log.Printf("[main] using LocalStack endpoint: %s", endpointURL)
@@ -63,7 +63,7 @@ func main() {
 		IdleTimeout:  120 * time.Second,
 	}
 
-	// SQS worker — only starts when SQS_QUEUE_URL is set
+	// SQS worker, only starts when SQS_QUEUE_URL is set
 	workerCtx, workerCancel := context.WithCancel(ctx)
 	if queueURL != "" {
 		worker := NewSQSWorker(queueURL, processor)
@@ -95,6 +95,7 @@ func main() {
 	}
 	log.Println("[server] stopped")
 }
+// It's a logger. Every time any request hits  server, this runs and writes a log line like
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

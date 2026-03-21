@@ -68,9 +68,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
-// -----------------------------------------------------------------------
 // Phase 1: Synchronous order processing
-// -----------------------------------------------------------------------
 
 // SyncOrder is the Phase 1 endpoint.
 //
@@ -86,7 +84,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SyncOrder(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
-	var order Order
+	var order Order        //Customer hands over their cart
 	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)

@@ -17,7 +17,8 @@ import (
 type SQSWorker struct {
 	queueURL  string
 	processor *PaymentProcessor
-	client    *http.Client
+	client    *http.Client     // the tool used to make HTTP requests to AWS
+
 	awsRegion string
 }
 
@@ -25,7 +26,8 @@ func NewSQSWorker(queueURL string, processor *PaymentProcessor) *SQSWorker {
 	return &SQSWorker{
 		queueURL:  queueURL,
 		processor: processor,
-		client:    &http.Client{Timeout: 30 * time.Second},
+		client:    &http.Client{Timeout: 30 * time.Second},  //  if AWS doesn't respond in 30 seconds, stop waiting and try again
+
 	}
 }
 
@@ -58,7 +60,7 @@ type sqsReceiveResponse struct {
 	} `json:"ReceiveMessageResponse"`
 }
 
-func (w *SQSWorker) poll(ctx context.Context) {
+func (w *SQSWorker) poll(ctx context.Context) {      // poll — checking the queue
 	// Build ReceiveMessage query
 	params := url.Values{}
 	params.Set("Action", "ReceiveMessage")
@@ -67,7 +69,9 @@ func (w *SQSWorker) poll(ctx context.Context) {
 	params.Set("VisibilityTimeout", "30")
 	params.Set("Version", "2012-11-05")
 
-	req, err := http.NewRequestWithContext(ctx, "POST", w.queueURL,
+	// Build the HTTP request to send to SQS. If building it fails 
+	// check if we're shutting down first, otherwise log the error and wait 5 seconds before trying again.
+	req, err := http.NewRequestWithContext(ctx, "POST", w.queueURL,      
 		strings.NewReader(params.Encode()))
 	if err != nil {
 		if ctx.Err() != nil {
@@ -92,7 +96,7 @@ func (w *SQSWorker) poll(ctx context.Context) {
 
 	body, _ := io.ReadAll(resp.Body)
 
-	// LocalStack returns XML by default — request JSON explicitly
+	// LocalStack returns XML by default, request JSON explicitly
 	// by adding Accept header. If we still get XML, just wait and retry.
 	if len(body) > 0 && body[0] == '<' {
 		// Got XML — parse it simply
@@ -168,13 +172,15 @@ func (w *SQSWorker) processMessage(ctx context.Context, body, receipt string) {
 	body = strings.ReplaceAll(body, "&lt;", "<")
 	body = strings.ReplaceAll(body, "&gt;", ">")
 
-	// Unwrap SNS envelope if present
+	// SNS wraps your order in an outer envelope before putting it in SQS. Try to unwrap it. 
+	// If unwrapping works and there's a message inside, use that as the actual order. Otherwise just use the raw body.
 	var envelope SNSEnvelope
 	orderJSON := body
 	if err := json.Unmarshal([]byte(body), &envelope); err == nil && envelope.Message != "" {
 		orderJSON = envelope.Message
 	}
 
+	// Parse the order JSON into an Order struct.
 	var order Order
 	if err := json.Unmarshal([]byte(orderJSON), &order); err != nil {
 		log.Printf("[worker] bad message, discarding: %v", err)
@@ -184,10 +190,13 @@ func (w *SQSWorker) processMessage(ctx context.Context, body, receipt string) {
 
 	log.Printf("[worker] processing order=%s customer=%d", order.OrderID, order.CustomerID)
 
+	// Run the payment, same 3 second process from Phase 1. If it fails, do not delete the message. 
+	// Just return. SQS will make the message visible again after 30 seconds and we'll retry automatically.
 	if err := w.processor.VerifyPayment(order.OrderID, order.CustomerID); err != nil {
 		log.Printf("[worker] order=%s payment FAILED: %v — will retry", order.OrderID, err)
 		return
 	}
+	// Payment succeeded! Log it and delete the message from the queue
 
 	log.Printf("[worker] order=%s payment verified ✓", order.OrderID)
 	w.deleteMessage(ctx, receipt)

@@ -11,18 +11,18 @@ import (
 )
 
 func main() {
-	port := os.Getenv("PORT")
+	port := os.Getenv("PORT")  //Read config from environment
 	if port == "" {
 		port = "8080"
 	}
 
-	processor := NewPaymentProcessor()
-	h := NewHandler(processor)
+	processor := NewPaymentProcessor() // creates the semaphore
+	h := NewHandler(processor) // injects it into the handler
 
 	mux := http.NewServeMux()
-	h.RegisterRoutes(mux)
+	h.RegisterRoutes(mux) // plugs in /health, /orders/sync, /metrics/payment
 
-	logged := loggingMiddleware(mux)
+	logged := loggingMiddleware(mux) // wraps everything with request logging
 
 	srv := &http.Server{
 		Addr:         ":" + port,
@@ -30,10 +30,10 @@ func main() {
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  120 * time.Second,
-	}
+	} //start the HTTP server
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	quit := make(chan os.Signal, 1)  // blocks here until Ctrl+C or ECS sends SIGTERM
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT) // waits up to 30s for in-flight requests to finish
 
 	go func() {
 		log.Printf("[server] listening on :%s", port)

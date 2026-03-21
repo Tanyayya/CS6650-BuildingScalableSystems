@@ -51,7 +51,7 @@ func NewPaymentProcessor() *PaymentProcessor {
 func (p *PaymentProcessor) VerifyPayment(orderID string, customerID int) error {
 	start := time.Now()
 
-	// Acquire a slot — goroutines ACTUALLY BLOCK here when all 5 are busy.
+	// Acquire a slot goroutines ACTUALLY BLOCK here when all 5 are busy.
 	p.sem <- struct{}{}
 	p.metrics.Active++
 
