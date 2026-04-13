@@ -25,7 +25,7 @@ def stats(times):
     return {
         "count":   len(times),
         "avg":     round(statistics.mean(times), 2),
-        "p50":     percentile(times, 50),
+        "p50":     percentile(times, 50),q
         "p95":     percentile(times, 95),
         "p99":     percentile(times, 99),
         "min":     round(min(times), 2),

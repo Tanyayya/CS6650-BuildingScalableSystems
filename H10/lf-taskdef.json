@@ -1,0 +1,30 @@
+{
+  "family": "kvdb-lf-node",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::989461485811:role/LabRole",
+  "taskRoleArn": "arn:aws:iam::989461485811:role/LabRole",
+  "containerDefinitions": [
+    {
+      "name": "kvdb-lf",
+      "image": "989461485811.dkr.ecr.us-east-1.amazonaws.com/kvdb-lf:latest",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/kvdb",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "lf"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "family": "kvdb-lf-leader",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::989461485811:role/LabRole",
+  "taskRoleArn": "arn:aws:iam::989461485811:role/LabRole",
+  "containerDefinitions": [{
+    "name": "kvdb-lf",
+    "image": "989461485811.dkr.ecr.us-east-1.amazonaws.com/kvdb-lf:latest",
+    "portMappings": [{"containerPort": 8080, "protocol": "tcp"}],
+    "environment": [
+      {"name": "ROLE",      "value": "leader"},
+      {"name": "W",         "value": "5"},
+      {"name": "R",         "value": "1"},
+      {"name": "FOLLOWERS", "value": "http://3.236.150.16:8080,http://98.84.5.156:8080,http://98.92.68.72:8080,http://100.53.200.175:8080"}
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/kvdb",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream-prefix": "lf-leader"
+      }
+    }
+  }]
+}
